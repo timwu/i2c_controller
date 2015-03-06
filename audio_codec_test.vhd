@@ -5,15 +5,16 @@ use ieee.numeric_std.all;
 entity audio_codec_test is
 	port (
 		clk : in std_logic;
-		LEDR : out std_logic_vector(7 downto 0);
+		LEDR : out std_logic_vector(8 downto 0);
 		audio_scl, audio_sda : inout std_logic
 	);
 end entity audio_codec_test;
 
 architecture RTL of audio_codec_test is
+	constant clock_period : time := 20 ns;
 	component i2c_controller
 		generic(device_addr  : std_logic_vector(7 downto 0) := x"34";
-			    clock_period : time := 20 ns;
+			    clock_period : time := clock_period;
 			    t_start_hold : time := 600 ns;
 			    t_stop_hold  : time := 600 ns;
 			    t_pulse_low  : time := 1300 ns;
@@ -29,7 +30,7 @@ architecture RTL of audio_codec_test is
 			 SDA, SCL     : inout std_logic);
 	end component i2c_controller;
 	
-	type state_t is (Idle, WriteAddr, WriteDone, ReadData, ReadDone);
+	type state_t is (Idle, WriteAddr, WriteDone, ReadDataLow, ReadLowDone, ReadDataHigh, ReadHighDone);
 	
 	signal read, en, done, busy, rst : std_logic;
 	signal dataIn, dataOut : std_logic_vector(7 downto 0);
@@ -49,15 +50,17 @@ begin
 			     SCL          => audio_scl);
 			     
 	
-	dataIn <= x"06";
+	dataIn <= x"0C";
 	rst <= '0';
 	
 	process (clk)
 	begin
 		if rising_edge(clk) then
 			state <= nextState;
-			if state = ReadDone then
-				LEDR <= dataOut;
+			if state = ReadLowDone then
+				LEDR(7 downto 0) <= dataOut;
+			elsif state = ReadHighDone then
+				LEDR(8) <= dataOut(0);
 			end if;
 		end if;
 	end process;
@@ -80,15 +83,27 @@ begin
 				en <= '1';
 				read <= '1';
 				if done = '0' then
-					nextState <= ReadData;
+					nextState <= ReadDataLow;
 				end if;
-			when ReadData =>
+			when ReadDataLow =>
 				en <= '1';
 				read <= '1';
 				if done = '1' then
-					nextState <= ReadDone;
+					nextState <= ReadLowDone;
 				end if;
-			when ReadDone =>
+			when ReadLowDone =>
+				en <= '1';
+				read <= '1';
+				if done = '0' then
+					nextState <= ReadDataHigh;
+				end if;
+			when ReadDataHigh =>
+				en <= '1';
+				read <= '1';
+				if done = '1' then
+					nextState <= ReadHighDone;
+				end if;
+			when ReadHighDone =>
 				if busy = '0' then
 					nextState <= Idle;
 				end if;
