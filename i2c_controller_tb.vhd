@@ -7,10 +7,10 @@ end entity i2c_controller_tb;
 
 architecture RTL of i2c_controller_tb is
 	constant clock_period : time                         := 1 ns;
-	constant device_addr  : std_logic_vector(6 downto 0) := "1110010";
+	constant device_addr  : std_logic_vector(7 downto 0) := x"13";
 
 	component i2c_controller
-		generic(device_addr  : std_logic_vector(6 downto 0) := device_addr;
+		generic(device_addr  : std_logic_vector(7 downto 0) := device_addr;
 			    clock_period : time                         := clock_period;
 			    t_start_hold : time                         := 4 ns;
 			    t_stop_hold  : time                         := 4 ns;
@@ -41,6 +41,8 @@ architecture RTL of i2c_controller_tb is
 
 	signal sdaBuffer      : tristate := Z;
 	signal sdaBufferState : integer range 0 to 2;
+	
+	signal full_device_addr : std_logic_vector(7 downto 0);
 begin
 	uut : i2c_controller
 		port map(clk          => clk,
@@ -54,6 +56,8 @@ begin
 			     currentState => currentState,
 			     SDA          => SDA,
 			     SCL          => SCL);
+
+	full_device_addr <= device_addr(7 downto 1) & read;
 
 	with sdaBuffer select SDA <=
 		'Z' when Z,
@@ -111,7 +115,7 @@ begin
 
 			wait until SCL = '0';
 
-			handleWrite(device_addr & read);
+			handleWrite(full_device_addr);
 
 			handleWrite(x"FF");
 
@@ -146,7 +150,7 @@ begin
 
 			wait until SCL = '0';
 
-			handleWrite(device_addr & '1');
+			handleWrite(full_device_addr);
 
 			handleRead(x"33", '0');
 
@@ -160,14 +164,14 @@ begin
 			waitForStart;
 			wait until SCL = '0';
 			
-			handleWrite(device_addr & '0');
+			handleWrite(full_device_addr);
 			
 			handleWrite(x"A1");
 			
 			waitForStart;
 			
 			wait until SCL = '0';
-			handleWrite(device_addr & '1');
+			handleWrite(full_device_addr);
 			handleRead(x"B1", '0');
 			handleRead(x"C2", '1');
 			

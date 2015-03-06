@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity i2c_controller is
 	generic(
-		device_addr  : std_logic_vector(6 downto 0);
+		device_addr  : std_logic_vector(7 downto 0);
 		clock_period : time := 20 ns;
 		t_start_hold : time := 600 ns;
 		t_stop_hold  : time := 600 ns;
@@ -98,6 +98,8 @@ begin
 
 		procedure enterStart is
 		begin
+			assert SCL /= '0' report "SCL is low on enterStart";
+			
 			if SDA = '0' then
 				clock(Low);
 				sdaState <= High;
@@ -112,7 +114,7 @@ begin
 			assert SCL /= '0' report "SCL is low on enterSendDeviceAddr";
 
 			clock(Low);
-			shiftRegister   <= device_addr & read;
+			shiftRegister   <= device_addr(7 downto 1) & read;
 			shiftCount      <= 8;
 			controllerState <= SendDeviceAddr;
 		end procedure;
