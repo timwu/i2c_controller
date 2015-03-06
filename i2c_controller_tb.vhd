@@ -24,7 +24,6 @@ architecture RTL of i2c_controller_tb is
 			 dataOut      : out   std_logic_vector(7 downto 0);
 			 done         : out   std_logic;
 			 busy         : out   std_logic;
-			 currentState : out   std_logic_vector(7 downto 0);
 			 SDA, SCL     : inout std_logic);
 	end component i2c_controller;
 
@@ -36,8 +35,6 @@ architecture RTL of i2c_controller_tb is
 	signal SDA, SCL           : std_logic;
 
 	signal test_done  : std_logic                    := '0';
-
-	signal currentState : std_logic_vector(7 downto 0);
 
 	signal sdaBuffer      : tristate := Z;
 	signal sdaBufferState : integer range 0 to 2;
@@ -53,14 +50,15 @@ begin
 			     dataOut      => dataOut,
 			     done         => done,
 			     busy         => busy,
-			     currentState => currentState,
 			     SDA          => SDA,
 			     SCL          => SCL);
 
 	full_device_addr <= device_addr(7 downto 1) & read;
 
+	SCL <= 'H';
+
 	with sdaBuffer select SDA <=
-		'Z' when Z,
+		'H' when Z,
 		'1' when High,
 		'0' when Low;
 

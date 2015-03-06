@@ -22,8 +22,6 @@ entity i2c_controller is
 		done         : out   std_logic;
 		busy         : out   std_logic;
 
-		currentState : out   std_logic_vector(7 downto 0);
-
 		SDA, SCL     : inout std_logic
 	);
 end entity i2c_controller;
@@ -48,16 +46,18 @@ architecture RTL of i2c_controller is
 	signal shiftCount    : integer range 0 to 8;
 
 	signal ackState : AckState_t := Waiting;
+
+	signal currentState : std_logic_vector(7 downto 0);
 begin
 	with sclState select SCL <=
 		'0' when Low,
 		'1' when High,
-		'H' when Released;
+		'Z' when Released;
 
 	with sdaState select SDA <=
 		'0' when Low,
 		'1' when High,
-		'H' when Released;
+		'Z' when Released;
 
 	with controllerState select busy <=
 		'0' when Idle,
