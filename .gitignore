@@ -3,3 +3,4 @@
 *.vcd
 *.o
 *.cf
+i2c_controller_tb
