@@ -136,7 +136,7 @@ begin
 
 			sdaBuffer <= Z;
 			wait until SCL = '1' or SCL = 'H';
-			assert SDA = ack;
+			assert SDA = ack report "Read ack doesn't match.";
 			wait until SCL = '0';
 		end procedure;
 		
@@ -150,7 +150,7 @@ begin
 
 			handleRead(x"33", '0');
 
-			handleRead(x"11", '0');
+			handleRead(x"11", '1');
 
 			waitForStop;
 		end procedure;
@@ -169,15 +169,17 @@ begin
 			wait until SCL = '0';
 			handleWrite(device_addr & '1');
 			handleRead(x"B1", '0');
+			handleRead(x"C2", '1');
 			
+			waitForStop;
 		end procedure;
 	begin
 		
 		write_test;
 		
-		--read_test;
+		read_test;
 
---		write_read_test;
+		write_read_test;
 		wait;
 	end process;
 
@@ -224,15 +226,21 @@ begin
 			
 			read <= '1';
 			wait until done = '1';
-			assert dataOut = x"B1";
+			assert dataOut = x"B1" report "Data read back doesn't match";
+			
+			wait until done = '1';
+			assert dataOut = x"C2" report "Read data does not match.";
+			en <= '0';
+			
+			wait until busy = '0';
 			
 		end procedure;
 	begin
 		write_test;
 
-		--read_test;
+		read_test;
 		
---		write_read_test;
+		write_read_test;
 
 		-- done
 		test_done <= '1';

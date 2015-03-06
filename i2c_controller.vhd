@@ -81,7 +81,7 @@ begin
 		x"FF" when others;
 
 	process(clk, rst)
-		variable counter : integer range 0 to low_ticks;
+		variable counter : integer range 0 to high_ticks + low_ticks;
 
 		procedure clock(state : in OutputState_t) is
 		begin
@@ -98,10 +98,12 @@ begin
 
 		procedure enterStart is
 		begin
-			assert SDA /= '0';
-			assert SCL /= '0';
-			sdaState        <= Low;
-			counter         := start_ticks;
+			if SDA = '0' then
+				clock(Low);
+				sdaState <= High;
+			else
+				counter := start_ticks + high_ticks;
+			end if;
 			controllerState <= Start;
 		end procedure;
 
@@ -172,7 +174,7 @@ begin
 		procedure enterStop is
 		begin
 			assert SCL /= '0' report "SCL is low on enter stop";
-			
+
 			clock(Low);
 			sdaState        <= Low;
 			controllerState <= Stop;
@@ -216,8 +218,10 @@ begin
 				when High =>
 					shiftRegister(shiftCount - 1) <= SDA;
 					if counter = 0 then
+						if shiftCount /= 1 then
+							clock(Low);
+						end if;
 						shiftCount <= shiftCount - 1;
-						clock(Low);
 					end if;
 				when Released =>
 					assert False;
@@ -238,8 +242,8 @@ begin
 					end if;
 				when High =>
 					if counter = 0 then
-						clock(Low);
 						sdaState <= Released;
+						ackState <= Ok;
 					end if;
 				when Released =>
 					assert False;
@@ -290,9 +294,22 @@ begin
 						enterStart;
 					end if;
 				when Start =>
-					if counter = 0 then
-						enterSendDeviceAddr;
-					end if;
+					case sclState is
+						when Low =>
+							sdaState <= High;
+							if counter = 0 then
+								clock(Released);
+								counter := high_ticks + start_ticks;
+							end if;
+						when High =>
+							assert False;
+						when Released =>
+							if counter = start_ticks then
+								sdaState <= Low;
+							elsif counter = 0 then
+								enterSendDeviceAddr;
+							end if;
+					end case;
 				when SendDeviceAddr =>
 					if shiftCount = 0 then
 						enterSendDeviceAddrDone;
